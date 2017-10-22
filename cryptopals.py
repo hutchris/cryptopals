@@ -1,29 +1,7 @@
 import yaml
 from base64 import b64encode,b64decode
 
-class CryptoBase(object):
-    commonLetters = 'ETAOIN SHRDLUetaoinshrdlu'
-    commonLettersBts = commonLetters.encode()
-    engStrRatio = 0.66
-
-    def get_inputs(self,exercise):
-        inputs = yaml.load(open('inputs.yaml','r').read())
-        self.input = inputs[exercise]['input']
-        self.expected = inputs[exercise]['expected']
-        if self.expected is None:
-            self.outputType = inputs[exercise]['outputType']
-
-    def do(self):
-        pass
-
-    def check_result(self):
-        self.do()
-        success = False
-        report = "Input: {i}\nResult: {r}\nExpected Result: {er}".format(i=self.input,r=self.result,er=self.expected)
-        if self.result == self.expected:
-            success = True
-        return(report,success)
-
+class Converters(object):
     def conv_hex_to_bytes(self,h,bitLength=8):
         if not isinstance(h,str):
             raise(Exception("Need inputs in string"))
@@ -33,6 +11,14 @@ class CryptoBase(object):
             temp.append(int(c,16))
         bts = bytes(temp)
         return(bts)
+
+    def conv_bytes_to_hex(self,b):
+        if not isinstance(b,bytes):
+            raise(Exception("Need input as bytes plz"))
+        out = ''
+        for c in b:
+            out += hex(c)[2:].zfill(2)
+        return(out)
 
     def conv_str_to_bytes(self,s,form='ascii'):
         if not isinstance(s,str):
@@ -51,25 +37,6 @@ class CryptoBase(object):
         b64 = b64encode(bts)
         return(b64)
 
-    def perf_xor_hex(self,h_1,h_2):
-        if not isinstance(h_1,str) or not isinstance(h_2,str):
-            raise(Exception("Need inputs in string"))
-        n_1 = int(h_1,16)
-        n_2 = int(h_2,16)
-        x = n_1 ^ n_2
-        return(hex(x)[2:])
-
-    def perf_xor_bytes(self,b_1,b_2):
-        if not isinstance(b_1,bytes) or not isinstance(b_2,bytes):
-            raise(Exception("Need inputs in bytes"))
-        if len(b_1) != len(b_2):
-            raise(Exception("Bytes not the same length"))
-        temp = []
-        for a,b in zip(b_1,b_2):
-            temp.append(a^b)
-        bts = bytes(temp)
-        return(bts)
-
     def conv_str_to_chunks(self,s,size):
         out = [s[i:i+size] for i in range(0,len(s),size)]
         return(out)
@@ -81,6 +48,7 @@ class CryptoBase(object):
         bts = "".join([chr(int(x,16)) for x in ch])
         return(bts)
 
+class Finders():
     def find_english_ratio(self,b):
         if not isinstance(b,bytes):
             raise(Exception("Need input as bytes plz"))
@@ -109,3 +77,68 @@ class CryptoBase(object):
             possibles.append({'text':self.perf_xor_bytes(cipherBytes,xorKey),'key':i})
         best = self.find_best_england(possibles)
         return(best)
+
+class Functions():
+    def perf_xor_hex(self,h_1,h_2):
+        if not isinstance(h_1,str) or not isinstance(h_2,str):
+            raise(Exception("Need inputs in string"))
+        n_1 = int(h_1,16)
+        n_2 = int(h_2,16)
+        x = n_1 ^ n_2
+        return(hex(x)[2:])
+
+    def perf_xor_bytes(self,b_1,b_2):
+        if not isinstance(b_1,bytes) or not isinstance(b_2,bytes):
+            raise(Exception("Need inputs in bytes"))
+        if len(b_1) != len(b_2):
+            raise(Exception("Bytes not the same length"))
+        temp = []
+        for a,b in zip(b_1,b_2):
+            temp.append(a^b)
+        bts = bytes(temp)
+        return(bts)
+
+    def make_long_key(self,key,length):
+        if not isinstance(key,bytes):
+            raise(Exception("Need input as bytes plz"))
+        if not  isinstance(length,int):
+            raise(Exception("Need length as int plz"))
+        newKey = key
+        while len(newKey) < length:
+            newKey += key
+        newKey = newKey[:length]
+        return(newKey)
+
+    def perf_rpt_xor_bytes(self,b,key):
+        if not isinstance(b,bytes) or not isinstance(key,bytes):
+            raise(Exception("Need input and key as bytes plz"))
+        longKey = self.make_long_key(key,len(b))
+        out = self.perf_xor_bytes(b,longKey)
+        return(out)
+
+class CryptoBase(Converters,Finders,Functions):
+    commonLetters = 'ETAOIN SHRDLUetaoinshrdlu'
+    commonLettersBts = commonLetters.encode()
+    engStrRatio = 0.66
+
+    def get_inputs(self,exercise):
+        with open('inputs.yaml','r') as inputsFile:
+            inputs = yaml.load(inputsFile)
+        self.input = inputs[exercise]['input']
+        self.expected = inputs[exercise]['expected']
+        if self.expected is None:
+            self.outputType = inputs[exercise]['outputType']
+
+    def do(self):
+        pass
+
+    def check_result(self):
+        self.do()
+        success = False
+        report = {'input':self.input,'result': self.result,'expected result':self.expected}
+        if self.result == self.expected:
+            success = True
+        return(report,success)
+
+    
+

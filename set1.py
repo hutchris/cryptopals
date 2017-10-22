@@ -36,6 +36,17 @@ class Ex4(CryptoBase):
         best = self.find_best_england(bests)
         self.result = [best['text'].decode(),best['key']]
 
+class Ex5(CryptoBase):
+    def __init__(self):
+        self.get_inputs('exercise5')
+
+    def do(self):
+        key = self.conv_str_to_bytes(self.input['key'])
+        textB = self.conv_str_to_bytes(self.input['text'])
+        longKey = self.make_long_key(key,len(textB))
+        outB = self.perf_xor_bytes(textB,longKey)
+        self.result = self.conv_bytes_to_hex(outB)
+
 
 
 
