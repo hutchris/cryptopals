@@ -38,7 +38,15 @@ class Converters(object):
         return(b64)
 
     def conv_str_to_chunks(self,s,size):
+        if not isinstance(s,str):
+            raise(Exception("Need inputs in string"))
         out = [s[i:i+size] for i in range(0,len(s),size)]
+        return(out)
+
+    def conv_bytes_to_chunks(self,b,size):
+        if not isinstance(b,bytes):
+            raise(Exception("Need input as bytes plz"))
+        out = [b[i:i+size] for i in range(0,len(b),size)]
         return(out)
 
     def conv_hex_to_ascii(self,h):
@@ -47,6 +55,20 @@ class Converters(object):
         ch = self.conv_str_to_chunks(h,2)
         bts = "".join([chr(int(x,16)) for x in ch])
         return(bts)
+
+    def conv_int_to_bin(self,i,bitLength=8):
+        if not isinstance(i,int):
+            raise(Exception("Need input in int"))
+        out = bin(i)[2:].zfill(8)
+        return(out)
+
+    def conv_bytes_to_bin(self,b):
+        if not isinstance(b,bytes):
+            raise(Exception("Need input as bytes plz"))
+        out = ''
+        for i in b:
+            out += self.conv_int_to_bin(i)
+        return(out)
 
 class Finders():
     def find_english_ratio(self,b):
@@ -77,6 +99,38 @@ class Finders():
             possibles.append({'text':self.perf_xor_bytes(cipherBytes,xorKey),'key':i})
         best = self.find_best_england(possibles)
         return(best)
+
+    def find_hamming_dist(self,b_1,b_2):
+        if not isinstance(b_1,bytes) or not isinstance(b_2,bytes):
+            raise(Exception("Need inputs in bytes"))
+        if len(b_1) != len(b_2):
+            raise(Exception("Bytes not the same length"))
+        bin_1 = self.conv_bytes_to_bin(b_1)
+        bin_2 = self.conv_bytes_to_bin(b_2)
+        count = 0
+        for x,y in zip(bin_1,bin_2):
+            if x != y:
+                count += 1
+        dist = count / len(bin_1)
+        return(dist)
+
+    def find_xor_keysize(self,b,sizeRange=range(2,40)):
+        if not isinstance(b,bytes):
+            raise(Exception("Need input as bytes plz"))
+        low = 1
+        for size in sizeRange:
+            chunks = self.conv_bytes_to_chunks(b,size)
+            goodChunks = [c for c in chunks if len(c) == len(chunks[0])]
+            nChunks = len(goodChunks)
+            dist = 0
+            for i in range(0,nChunks-1):
+                dist += self.find_hamming_dist(goodChunks[i],goodChunks[i+1])
+            distAv = dist/nChunks
+            if distAv < low:
+                best = size
+                low = distAv
+        return(best)
+
 
 class Functions():
     def perf_xor_hex(self,h_1,h_2):
@@ -115,6 +169,18 @@ class Functions():
         longKey = self.make_long_key(key,len(b))
         out = self.perf_xor_bytes(b,longKey)
         return(out)
+
+    def perf_transpose(self,b,length):
+        if not isinstance(b,bytes):
+            raise(Exception("Need b as bytes plz"))
+        if not  isinstance(length,int):
+            raise(Exception("Need length as int plz"))
+        chunks = self.conv_bytes_to_chunks(b,length)
+        out = []
+        for i in range(length):
+            out.append(bytes([c[i] for c in chunks if len(c) >= i + 1]))
+        return(out)
+
 
 class CryptoBase(Converters,Finders,Functions):
     commonLetters = 'ETAOIN SHRDLUetaoinshrdlu'

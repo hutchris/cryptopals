@@ -1,4 +1,5 @@
 from cryptopals import CryptoBase
+from base64 import b64encode,b64decode
 
 class Ex1(CryptoBase):
     def __init__(self):
@@ -47,6 +48,14 @@ class Ex5(CryptoBase):
         outB = self.perf_xor_bytes(textB,longKey)
         self.result = self.conv_bytes_to_hex(outB)
 
+class Ex6(CryptoBase):
+    def __init__(self):
+        self.get_inputs('exercise6')
+
+    def do(self):
+        inputB = b64decode(self.input)
+        keySize = self.find_xor_keysize(inputB)
+        tranList = self.perf_transpose(inputB,keySize)
 
 
 
