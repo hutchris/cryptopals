@@ -56,6 +56,13 @@ class Ex6(CryptoBase):
         inputB = b64decode(self.input)
         keySize = self.find_xor_keysize(inputB)
         tranList = self.perf_transpose(inputB,keySize)
+        key = bytes()
+        for l in tranList:
+            xorResult = self.find_single_key_xor(l)
+            key += bytes([xorResult['key']])
+        longKey = self.make_long_key(key,len(inputB))
+        outB = self.perf_xor_bytes(longKey,inputB)
+        self.result = [key.decode(),outB.decode()]
 
 
 
