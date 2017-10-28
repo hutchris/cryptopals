@@ -1,5 +1,6 @@
 from cryptopals import CryptoBase
 from base64 import b64encode,b64decode
+from Crypto.Cipher import AES
 
 class Ex1(CryptoBase):
     def __init__(self):
@@ -63,6 +64,17 @@ class Ex6(CryptoBase):
         longKey = self.make_long_key(key,len(inputB))
         outB = self.perf_xor_bytes(longKey,inputB)
         self.result = [key.decode(),outB.decode()]
+
+class Ex7(CryptoBase):
+    def __init__(self):
+        self.get_inputs('exercise7')
+
+    def do(self):
+        inputB = b64decode(self.input['text'])
+        keyB = self.input['key'].encode()
+        out = self.aes.ecb_dec(key=keyB,b=inputB)
+        self.result = out.decode()
+
 
 
 

@@ -1,5 +1,6 @@
 import yaml
 from base64 import b64encode,b64decode
+from Crypto.Cipher import AES
 
 class Converters(object):
     def conv_hex_to_bytes(self,h,bitLength=8):
@@ -182,10 +183,20 @@ class Functions():
         return(out)
 
 
+class AESFunctions():
+    def ecb_dec(self,key,b):
+        if not isinstance(b,bytes):
+            raise(Exception("Need b as bytes plz"))
+        cipher = AES.new(key=key,mode=AES.MODE_ECB)
+        raw = cipher.decrypt(b)
+        return(raw)
+
+
 class CryptoBase(Converters,Finders,Functions):
     commonLetters = 'ETAOIN SHRDLUetaoinshrdlu'
     commonLettersBts = commonLetters.encode()
     engStrRatio = 0.66
+    aes = AESFunctions()
 
     def get_inputs(self,exercise):
         with open('inputs.yaml','r') as inputsFile:
