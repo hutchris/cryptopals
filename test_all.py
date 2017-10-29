@@ -1,7 +1,7 @@
 import unittest
-import set1
+import set1,set2
 
-sets = [set1]
+sets = [set1,set2]
 
 def crypto_test_true(exObj):
     report,success = exObj.check_result()

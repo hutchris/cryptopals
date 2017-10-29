@@ -183,13 +183,29 @@ class Functions():
         return(out)
 
 
-class AESFunctions():
+class AESFunctions(Converters,Finders,Functions):
     def ecb_dec(self,key,b):
         if not isinstance(b,bytes):
             raise(Exception("Need b as bytes plz"))
         cipher = AES.new(key=key,mode=AES.MODE_ECB)
         raw = cipher.decrypt(b)
         return(raw)
+
+    def detect_ecb(self,b):
+        chunks = self.conv_bytes_to_chunks(b,16)
+        ecb = False
+        for chunk in chunks:
+            if chunks.count(chunk) > 1:
+                ecb = True
+        return(ecb)
+
+    def pad_bytes(self,b,length):
+        if not isinstance(b,bytes):
+            raise(Exception("Need b as bytes plz"))
+        pad_char = bytes([length - len(b)])
+        while len(b) < length:
+            b += pad_char
+        return(b)
 
 
 class CryptoBase(Converters,Finders,Functions):

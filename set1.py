@@ -1,6 +1,5 @@
 from cryptopals import CryptoBase
 from base64 import b64encode,b64decode
-from Crypto.Cipher import AES
 
 class Ex1(CryptoBase):
     def __init__(self):
@@ -74,6 +73,23 @@ class Ex7(CryptoBase):
         keyB = self.input['key'].encode()
         out = self.aes.ecb_dec(key=keyB,b=inputB)
         self.result = out.decode()
+
+class Ex8(CryptoBase):
+    def __init__(self):
+        self.get_inputs('exercise8')
+
+    def do(self):
+        inputList = [b64decode(i) for i in self.input]
+        ecbInputs = []
+        for i in inputList:
+            if self.aes.detect_ecb(i):
+                ecbInputs.append(i)
+        if len(ecbInputs) == 1:
+            self.result = b64encode(ecbInputs[0]).decode()
+        elif len(ecbInputs) == 0:
+            raise(Exception("No ecb mode strings detected"))
+        elif len(ecbInputs) > 1:
+            raise(Exception("Multiple ecb mode strings detected"))
 
 
 
