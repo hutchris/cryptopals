@@ -1,4 +1,5 @@
 import yaml
+import random
 from base64 import b64encode,b64decode
 from Crypto.Cipher import AES
 
@@ -182,14 +183,88 @@ class Functions():
             out.append(bytes([c[i] for c in chunks if len(c) >= i + 1]))
         return(out)
 
+    def gen_rand(self,length):
+        if not isinstance(length,int):
+            raise(Exception("Need length as int plz"))
+        out = b''
+        for i in range(length):
+            out += bytes([random.randint(0,255)])
+        return(out)
+
+    def append_padding(self,b,frLen=None,baLen=None):
+        if not isinstance(b,bytes):
+            raise(Exception("Need b as bytes plz"))
+        if frLen is None:
+            frLen = random.randint(5,10)
+        if baLen is None:
+            baLen = random.randint(5,10)
+        front = self.gen_rand(frLen)
+        back = self.gen_rand(baLen)
+        out = front + b + back
+        return(out)
+
+    def pad_bytes(self,b,length):
+        if not isinstance(b,bytes):
+            raise(Exception("Need b as bytes plz"))
+        pad_char = bytes([length - len(b)])
+        while len(b) < length:
+            b += pad_char
+        return(b)
+
+    def pad_to_mod(self,b,modLen):
+        if not isinstance(b,bytes):
+            raise(Exception("Need b as bytes plz"))
+        if not isinstance(modLen,int):
+            raise(Exception("Need mod length as int plz"))
+        diff = modLen - (len(b) % modLen)
+        if diff != 16:
+            b = self.pad_bytes(b,len(b)+diff)
+        return(b)
+
 
 class AESFunctions(Converters,Finders,Functions):
     def ecb_dec(self,key,b):
-        if not isinstance(b,bytes):
-            raise(Exception("Need b as bytes plz"))
+        if not isinstance(b,bytes) or not isinstance(key,bytes):
+            raise(Exception("Need b and key as bytes plz"))
         cipher = AES.new(key=key,mode=AES.MODE_ECB)
         raw = cipher.decrypt(b)
         return(raw)
+
+    def ecb_enc(self,key,b):
+        if not isinstance(b,bytes) or not isinstance(key,bytes):
+            raise(Exception("Need b and key as bytes plz"))
+        b = self.pad_to_mod(b,len(key))
+        cipher = AES.new(key=key,mode=AES.MODE_ECB)
+        raw = cipher.encrypt(b)
+        return(raw)
+
+    def cbc_dec(self,key,b,iv):
+        if not isinstance(b,bytes) or not isinstance(key,bytes) or not isinstance(iv,bytes):
+            raise(Exception("Need b and key and iv as bytes plz"))
+        chunks = self.conv_bytes_to_chunks(b,len(key))
+        out = b''
+        for index,chunk in enumerate(chunks):
+            if index == 0:
+                prevChunk = iv
+            else:
+                prevChunk = chunks[index-1]
+            raw = self.ecb_dec(b=chunk,key=key)
+            out += self.perf_xor_bytes(raw,prevChunk)
+        return(out)
+
+    def cbc_enc(self,key,b,iv):
+        if not isinstance(b,bytes) or not isinstance(key,bytes) or not isinstance(iv,bytes):
+            raise(Exception("Need b and key and iv as bytes plz"))
+        chunks = self.conv_bytes_to_chunks(b,len(key))
+        if len(chunks[-1]) < len(key):
+            chunks[-1] = self.pad_bytes(chunks[-1],len(key))
+        out = b''
+        prevChunk = iv
+        for index,chunk in enumerate(chunks):
+            toEnc = self.perf_xor_bytes(chunk,prevChunk)
+            prevChunk = self.ecb_enc(b=toEnc,key=key)
+            out += prevChunk
+        return(out)
 
     def detect_ecb(self,b):
         chunks = self.conv_bytes_to_chunks(b,16)
@@ -199,13 +274,35 @@ class AESFunctions(Converters,Finders,Functions):
                 ecb = True
         return(ecb)
 
-    def pad_bytes(self,b,length):
-        if not isinstance(b,bytes):
-            raise(Exception("Need b as bytes plz"))
-        pad_char = bytes([length - len(b)])
-        while len(b) < length:
-            b += pad_char
-        return(b)
+    def rand_enc(self,plainBytes,length=16):
+        if not isinstance(plainBytes,bytes):
+            raise(Exception("Need plaintext as bytes plz"))
+        key = self.gen_rand(length)
+        iv = self.gen_rand(length)
+        mode = random.randint(0,1)
+        plainBytes = self.append_padding(plainBytes)
+        if mode == 0:
+            out = self.ecb_enc(key,plainBytes)
+        else:
+            out = self.cbc_enc(key,plainBytes,iv)
+        return(out)
+
+    def rand_enc_append(self,plainBytes,unknownBytes,key=None):
+        if not isinstance(plainBytes,bytes) or not isinstance(unknownBytes,bytes):
+            raise(Exception("Need plaintext and key as bytes plz"))
+        if key is None:
+            key = self.key
+        toEnc = plainBytes+unknownBytes
+        out = self.ecb_enc(key,toEnc)
+        return(out)
+
+    def mode_oracle(self,cipherBytes):
+        if not isinstance(cipherBytes,bytes):
+            raise(Exception("Need ciphertext as bytes plz"))
+        if self.detect_ecb(cipherBytes):
+            return("ECB")
+        else:
+            return("CBC")
 
 
 class CryptoBase(Converters,Finders,Functions):
@@ -221,6 +318,11 @@ class CryptoBase(Converters,Finders,Functions):
         self.expected = inputs[exercise]['expected']
         if self.expected is None:
             self.outputType = inputs[exercise]['outputType']
+
+    def get_other_input(self,exercise):
+        with open('inputs.yaml','r') as inputsFile:
+            inputs = yaml.load(inputsFile)
+        return(inputs[exercise]['input'])
 
     def do(self):
         pass
