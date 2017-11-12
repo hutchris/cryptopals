@@ -58,13 +58,22 @@ class Ex12(CryptoBase):
         if self.aes.mode_oracle(self.aes.rand_enc_append(largePlain,unknown,self.key)) == 'ECB':
             self.ecb = True
         #Discover unknown text:
-        known = b'A'*(len(self.pad_to_mod(unknown,self.blockSize)))
+        AABlock = b'A'*(len(self.pad_to_mod(unknown,self.blockSize)))
+        self.unknownPlain = b''
         for i in range(len(unknown)):
-            known = known[1:]
-            cipher = self.aes.rand_enc_append(known,unknown,self.key)
-            knownBlock = cipher[:len(known)+1]
-            for i in range(255):
-                tempknown = known+bytes([i])
+            smallAABlock = AABlock[i+1:]
+            cipher = self.aes.rand_enc_append(smallAABlock,unknown,self.key)
+            knownBlock = cipher[:len(AABlock)]
+            knownPlain = smallAABlock + self.unknownPlain
+            for n in range(255):
+                tempKnown = knownPlain + bytes([n])
+                tempCipher = self.aes.rand_enc_append(tempKnown,unknown,self.key)
+                tempKnownBlock = tempCipher[:len(AABlock)]
+                if tempKnownBlock == knownBlock:
+                    self.unknownPlain += bytes([n])
+                    break
+        self.result = [self.blockSize,self.ecb,self.unknownPlain.decode()]
+
 
 
 
