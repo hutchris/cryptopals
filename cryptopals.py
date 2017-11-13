@@ -206,9 +206,18 @@ class Functions():
     def pad_bytes(self,b,length):
         if not isinstance(b,bytes):
             raise(Exception("Need b as bytes plz"))
-        pad_char = bytes([length - len(b)])
+        padChar = bytes([length - len(b)])
         while len(b) < length:
-            b += pad_char
+            b += padChar
+        return(b)
+
+    def unpad_bytes(self,b):
+        if not isinstance(b,bytes):
+            raise(Exception("Need b as bytes plz"))
+        if b[-1] == bytes([1]) or b[-2] == b[-1]:
+            padInt = b[-1]
+            padIntNeg = padInt-(padInt*2)
+            b = b[:padIntNeg]
         return(b)
 
     def pad_to_mod(self,b,modLen):
@@ -220,6 +229,44 @@ class Functions():
         if diff != 16:
             b = self.pad_bytes(b,len(b)+diff)
         return(b)
+
+    def parse_url(self,url):
+        if not isinstance(url,str):
+            raise(Exception("Need url as str plz"))
+        elements = url.split('&')
+        out = {}
+        for element in elements:
+            out[element.split('=')[0]] = element.split('=')[1]
+        return(out)
+
+    def encode_profile(self,email):
+        if not isinstance(email,str):
+            raise(Exception("Need url as str plz"))
+        email = email.replace('&','').replace('=','')
+        elements = {
+            'email':email,
+            'uid': 10,
+            'role': 'user',
+        }
+        out = 'email={ee}&uid={eu}&role={er}'.format(
+            ee=elements['email'],
+            eu=elements['uid'],
+            er=elements['role']
+        )
+        return(out)
+
+    def enc_profile(self,email,key):
+        profile = self.encode_profile(email).encode()
+        ciphertext = self.aes.ecb_enc(key,profile)
+        return(ciphertext)
+
+    def dec_profile(self,ciphertext,key):
+        if not isinstance(ciphertext,bytes):
+            raise(Exception("Need ciphertext as bytes plz"))
+        profileBytes = self.aes.ecb_dec(key,ciphertext)
+        profileStr = self.unpad_bytes(profileBytes).decode()
+        elements = self.parse_url(profileStr)
+        return(elements)
 
 
 class AESFunctions(Converters,Finders,Functions):

@@ -1,3 +1,4 @@
+from random import choice
 from cryptopals import CryptoBase
 from base64 import b64encode,b64decode
 
@@ -73,6 +74,60 @@ class Ex12(CryptoBase):
                     self.unknownPlain += bytes([n])
                     break
         self.result = [self.blockSize,self.ecb,self.unknownPlain.decode()]
+
+class Ex13(CryptoBase):
+    def __init__(self):
+        self.get_inputs('exercise13') 
+        self.key = self.gen_rand(16)
+
+    def do(self):
+        #detect ecb and key length
+        emailInput = "A"*256
+        cipherText = self.enc_profile(emailInput,self.key)
+        for i in [16,32,64]:
+            chunks = self.conv_bytes_to_chunks(cipherText,i)
+            doubles = [ch for ch in chunks if chunks.count(ch) > 1]
+            if len(doubles) > 0:
+                self.blockSize = i
+                break
+        #find how much text before our input
+        chunks = self.conv_bytes_to_chunks(cipherText,self.blockSize)
+        doubles = [ch for ch in chunks if chunks.count(ch) > 1]
+        firstBlock = chunks.index(doubles[0])-1
+        firstMixedBlock = chunks[firstBlock]
+        for i in range(self.blockSize):
+            emailInput = "A"*i
+            cipherText = self.enc_profile(emailInput,self.key)
+            tempChunks = self.conv_bytes_to_chunks(cipherText,self.blockSize)
+            tempChunk = tempChunks[firstBlock]
+            if tempChunk == firstMixedBlock:
+                self.offset = i
+                self.minChunks = len(tempChunks)
+                break
+        #find ciphertext to inject at end of ciphertext
+        emailInput = (b"A"*self.offset + self.pad_to_mod(b'admin',self.blockSize)).decode()
+        cipherText = self.enc_profile(emailInput,self.key)
+        chunks = self.conv_bytes_to_chunks(cipherText,self.blockSize)
+        inject = chunks[firstBlock+1]
+        #find input length that results in no padding
+        for i in range(self.offset,self.offset+self.blockSize+1):
+            emailInput = "A"*i
+            cipherText = self.enc_profile(emailInput,self.key)
+            tempChunks = self.conv_bytes_to_chunks(cipherText,self.blockSize)
+            if len(tempChunks) > self.minChunks:
+                self.goodLen = i + len('user') - 1
+                break
+        #inject evil block to end of legit ciphertext
+        user = ''
+        for i in range(self.goodLen - len('@gmail.com')):
+            user += bytes([choice(range(96,122))]).decode()
+        emailInput = user + '@gmail.com'
+        cipherText = self.enc_profile(emailInput,self.key)
+        chunks = self.conv_bytes_to_chunks(cipherText,self.blockSize)
+        chunks[-1] = inject
+        evilCipherText = b''.join(chunks)
+        self.profile = self.dec_profile(evilCipherText,self.key)
+        self.result = self.profile['role']
 
 
 
