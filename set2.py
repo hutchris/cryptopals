@@ -1,4 +1,4 @@
-from random import choice
+from random import choice,randint
 from cryptopals import CryptoBase
 from base64 import b64encode,b64decode
 
@@ -46,9 +46,9 @@ class Ex12(CryptoBase):
         unknown = b64decode(self.input)
         #find block size:
         possSizes = [16,32,64]
-        noPlain = self.aes.rand_enc_append(b'',unknown,self.key)
+        noPlain = self.aes.rand_enc_append([b'',unknown],self.key)
         for i in possSizes:
-            c = self.aes.rand_enc_append(b'A'*i,unknown,self.key)
+            c = self.aes.rand_enc_append([b'A'*i,unknown],self.key)
             cChunks = self.conv_bytes_to_chunks(c,i)
             noPlainChunks = self.conv_bytes_to_chunks(noPlain,i)
             if noPlainChunks[0] == cChunks[1]:
@@ -56,19 +56,19 @@ class Ex12(CryptoBase):
                 break
         #detect ecb
         largePlain = self.get_other_input('exercise11').encode()
-        if self.aes.mode_oracle(self.aes.rand_enc_append(largePlain,unknown,self.key)) == 'ECB':
+        if self.aes.mode_oracle(self.aes.rand_enc_append([largePlain,unknown],self.key)) == 'ECB':
             self.ecb = True
         #Discover unknown text:
         AABlock = b'A'*(len(self.pad_to_mod(unknown,self.blockSize)))
         self.unknownPlain = b''
         for i in range(len(unknown)):
             smallAABlock = AABlock[i+1:]
-            cipher = self.aes.rand_enc_append(smallAABlock,unknown,self.key)
+            cipher = self.aes.rand_enc_append([smallAABlock,unknown],self.key)
             knownBlock = cipher[:len(AABlock)]
             knownPlain = smallAABlock + self.unknownPlain
             for n in range(255):
                 tempKnown = knownPlain + bytes([n])
-                tempCipher = self.aes.rand_enc_append(tempKnown,unknown,self.key)
+                tempCipher = self.aes.rand_enc_append([tempKnown,unknown],self.key)
                 tempKnownBlock = tempCipher[:len(AABlock)]
                 if tempKnownBlock == knownBlock:
                     self.unknownPlain += bytes([n])
@@ -81,7 +81,7 @@ class Ex13(CryptoBase):
         self.key = self.gen_rand(16)
 
     def do(self):
-        #detect ecb and key length
+        #detect ecb and block length
         emailInput = "A"*256
         cipherText = self.enc_profile(emailInput,self.key)
         for i in [16,32,64]:
@@ -128,6 +128,19 @@ class Ex13(CryptoBase):
         evilCipherText = b''.join(chunks)
         self.profile = self.dec_profile(evilCipherText,self.key)
         self.result = self.profile['role']
+
+class Ex14(CryptoBase):
+    def __init__(self):
+        self.get_inputs('exercise14') 
+        self.key = self.gen_rand(16)
+        self.randPre = self.gen_rand(randint(0,128))
+        #skipping find block size cos cbf
+        self.blockSize = 16
+
+    def do(self):
+        #
+
+
 
 
 

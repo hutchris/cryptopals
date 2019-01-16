@@ -334,12 +334,15 @@ class AESFunctions(Converters,Finders,Functions):
             out = self.cbc_enc(key,plainBytes,iv)
         return(out)
 
-    def rand_enc_append(self,plainBytes,unknownBytes,key=None):
-        if not isinstance(plainBytes,bytes) or not isinstance(unknownBytes,bytes):
-            raise(Exception("Need plaintext and key as bytes plz"))
+    def rand_enc_append(self,bytesList,key=None):
+        if not isinstance(bytesList,list):
+            raise(Exception("Need input as list plz"))
+        for b in bytesList:
+            if not isinstance(b,bytes):
+                raise(Exception("Need list items as bytes plz"))
         if key is None:
             key = self.key
-        toEnc = plainBytes+unknownBytes
+        toEnc = b''.join(bytesList)
         out = self.ecb_enc(key,toEnc)
         return(out)
 
